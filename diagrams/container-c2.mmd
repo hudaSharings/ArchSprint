@@ -1,0 +1,28 @@
+C4Container
+    title Container Diagram — Retail Store Display Management App
+    Person(store_admin, "Store Admin", "Uses Web and Mobile clients")
+    System_Ext(product_scanners, "Product Scanners", "Streams inventory events")
+    System_Ext(door_scanners, "Main Door Scanners", "Streams footfall")
+    System_Ext(gen_ai, "Gen AI Service", "Product details, events, trends, sales context")
+    System_Boundary(display_system, "Retail Store Display Management App [REQ-F-001]") {
+        Container(web_app, "Web App", "Web", "Store admin UI; products, inventory, display config, visualization [REQ-F-002],[REQ-F-009]")
+        Container(mobile_app, "Mobile App", "Android / iOS", "Store admin UI on mobile [REQ-F-012]")
+        Container(api, "Backend API", "API", "Multi-tenant APIs; catalog, inventory, scanners, display config [REQ-F-006],[REQ-F-008],[REQ-F-010]")
+        Container(stream_ingest, "Stream Ingest", "Stream processing", "Consumes product scanner and footfall streams [REQ-NF-008]")
+        Container(config_engine, "Configuration Engine", "LLM / Custom", "Proposes display config from events, footfall, sales [REQ-F-010]")
+        Container(analytics, "Analytics Engine", "e.g. Feldera", "Incremental pipelines and computation [REQ-NF-009]")
+        ContainerDb(store_db, "Store DB", "Database", "Products, inventory, display config, tenant data")
+    }
+    Rel(store_admin, web_app, "Uses", "HTTPS")
+    Rel(store_admin, mobile_app, "Uses", "HTTPS")
+    Rel(web_app, api, "Calls", "HTTPS/JSON")
+    Rel(mobile_app, api, "Calls", "HTTPS/JSON")
+    Rel(api, store_db, "Reads/writes", "DB")
+    Rel(api, config_engine, "Requests recommendations", "Internal")
+    Rel(api, analytics, "Queries / subscribes", "Internal")
+    Rel(stream_ingest, api, "Publishes events", "Internal")
+    Rel(stream_ingest, analytics, "Feeds pipelines", "Internal")
+    Rel(config_engine, gen_ai, "Calls for events/sales", "API")
+    Rel(analytics, store_db, "Reads/writes", "DB")
+    Rel(product_scanners, stream_ingest, "Streams", "Streaming")
+    Rel(door_scanners, stream_ingest, "Streams", "Streaming")

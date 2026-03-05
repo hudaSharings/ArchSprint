@@ -1,0 +1,13 @@
+C4Context
+    title System Context — Retail Store Display Management App
+    Person(store_admin, "Store Admin", "Manages products, inventory, scanners, and display configuration via Web/Mobile")
+    System(display_app, "Retail Store Display Management App", "Multi-tenant SaaS for product/inventory, scanner streams, footfall, and display configuration [REQ-F-001]")
+    System_Ext(product_scanners, "Product Scanners", "Stream inventory additions/deletions [REQ-F-005],[REQ-F-006]")
+    System_Ext(door_scanners, "Main Door Scanners", "Stream footfall with demographics [REQ-F-007],[REQ-F-008]")
+    System_Ext(gen_ai, "Gen AI Service", "Product details, events/trends, historical sales [REQ-F-003],[REQ-F-010]")
+    System_Ext(erp_crm, "ERP / CRM", "Future OEM integration [REQ-F-014]")
+    Rel(store_admin, display_app, "Uses", "HTTPS")
+    Rel(display_app, product_scanners, "Consumes stream", "Streaming")
+    Rel(display_app, door_scanners, "Consumes stream", "Streaming")
+    Rel(display_app, gen_ai, "Calls for enrichment & events", "API")
+    Rel(display_app, erp_crm, "Integrates (future)", "API")
