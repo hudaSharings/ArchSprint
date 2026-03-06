@@ -1,0 +1,154 @@
+Project retail_display_app {
+  database_type: "PostgreSQL"
+}
+
+Table tenants {
+  id uuid [pk]
+  name varchar(150)
+  slug varchar(80)
+  status varchar(32)
+  plan varchar(64)
+  default_locale varchar(10)
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table users {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  email varchar(255)
+  display_name varchar(150)
+  role varchar(32)
+  is_active boolean
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table stores {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  name varchar(150)
+  type varchar(64)
+  city varchar(100)
+  country varchar(50)
+  timezone varchar(50)
+  area_sq_ft int
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table product_categories {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  name varchar(150)
+  parent_id uuid [ref: > product_categories.id]
+}
+
+Table products {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  external_sku varchar(64)
+  name varchar(255)
+  description text
+  category_id uuid [ref: > product_categories.id]
+  price numeric(12,2)
+  unit varchar(32)
+  source varchar(32)
+  is_active boolean
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table devices {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  device_type varchar(32)
+  name varchar(150)
+  status varchar(32)
+  last_seen_at timestamptz
+  created_at timestamptz
+}
+
+Table inventory_events {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  product_id uuid [not null, ref: > products.id]
+  device_id uuid [ref: > devices.id]
+  event_type varchar(32)
+  quantity int
+  occurred_at timestamptz
+  ingested_at timestamptz
+}
+
+Table inventory_snapshots {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  product_id uuid [not null, ref: > products.id]
+  quantity_on_hand int
+  as_of timestamptz
+}
+
+Table footfall_events {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  device_id uuid [not null, ref: > devices.id]
+  gender varchar(16)
+  age_bucket varchar(16)
+  entered_at timestamptz
+  ingested_at timestamptz
+}
+
+Table display_zones {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  code varchar(64)
+  name varchar(150)
+  description text
+  created_at timestamptz
+}
+
+Table display_configs {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  store_id uuid [not null, ref: > stores.id]
+  name varchar(200)
+  schedule varchar(32)
+  status varchar(32)
+  effective_from timestamptz
+  effective_to timestamptz
+  use_recommendation boolean
+  sources_events_trends boolean
+  sources_footfall_last_week boolean
+  sources_historical_sales varchar(16)
+  created_by uuid [ref: > users.id]
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table display_layout_items {
+  id uuid [pk]
+  display_config_id uuid [not null, ref: > display_configs.id]
+  zone_id uuid [not null, ref: > display_zones.id]
+  product_id uuid [ref: > products.id]
+  category_id uuid [ref: > product_categories.id]
+  position_index int
+  layout_hint varchar(64)
+}
+
+Ref: stores.tenant_id > tenants.id
+Ref: devices.store_id > stores.id
+Ref: products.store_id > stores.id
+Ref: inventory_events.product_id > products.id
+Ref: inventory_events.device_id > devices.id
+Ref: footfall_events.device_id > devices.id
+Ref: display_zones.store_id > stores.id
+Ref: display_configs.store_id > stores.id
+Ref: display_layout_items.zone_id > display_zones.id
+Ref: display_layout_items.display_config_id > display_configs.id
+
