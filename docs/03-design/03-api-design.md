@@ -3,6 +3,8 @@
 **Traceability:** [requirements](../01-requirements/requirements.md) · [event-storming](../02-discovery/event-storming.md) · [architecture overview](./01-architecture-overview.md)  
 **Tags:** [DESIGN-DEC-020] [REQ]
 
+**OpenAPI (Swagger):** The full API is defined in OpenAPI 3.0 YAML for use in Swagger UI, Swagger Editor, or codegen: [openapi.yaml](./openapi.yaml). Import that file into [Swagger Editor](https://editor.swagger.io) or host it for Swagger UI.
+
 ---
 
 ## 1. API Principles [ADR]

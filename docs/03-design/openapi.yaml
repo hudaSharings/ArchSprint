@@ -1,0 +1,936 @@
+openapi: 3.0.3
+info:
+  title: Retail Store Display Management API
+  description: |
+    Multi-tenant SaaS API for product/inventory, scanner streams, footfall, and display configuration.
+    All tenant-scoped paths require JWT; path `tenantId` must match authenticated tenant.
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: /api/v1
+    description: API v1 base path (relative to host)
+
+tags:
+  - name: Tenant & Access
+    description: Tenant onboarding and profile
+  - name: Catalog & Inventory
+    description: Products and catalog generation
+  - name: Jobs
+    description: Async job status (e.g. catalog generation)
+  - name: Scanner & Streaming
+    description: Device pairing and event ingestion
+  - name: Display Configuration
+    description: Zones and display configs
+  - name: Analytics
+    description: Zone and product performance
+
+security:
+  - BearerAuth: []
+
+paths:
+  /tenants:
+    post:
+      tags: [Tenant & Access]
+      summary: Create tenant (trial signup)
+      description: Public, rate-limited. Supports self-service trial ([REQ-F-013]).
+      operationId: createTenant
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Rate limited
+
+  /tenants/{tenantId}:
+    get:
+      tags: [Tenant & Access]
+      summary: Get tenant profile
+      operationId: getTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantProfile'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/stores/{storeId}/catalog:generate:
+    post:
+      tags: [Catalog & Inventory]
+      summary: Generate initial catalog
+      description: Async job; catalog initialized from store type and questionnaires ([REQ-F-004]).
+      operationId: generateCatalog
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateCatalogRequest'
+      responses:
+        '202':
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Get job status
+      description: Poll for catalog generation or other async job status.
+      operationId: getJob
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/stores/{storeId}/products:
+    get:
+      tags: [Catalog & Inventory]
+      summary: List products
+      operationId: listProducts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paginated products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Catalog & Inventory]
+      summary: Create product
+      operationId: createProduct
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/stores/{storeId}/products:generate:
+    post:
+      tags: [Catalog & Inventory]
+      summary: Gen-AI assisted product suggestion
+      description: Fetch product details using Gen AI ([REQ-F-003]).
+      operationId: generateProduct
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateProductRequest'
+      responses:
+        '200':
+          description: Suggested product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateProductResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/stores/{storeId}/products/{productId}:
+    get:
+      tags: [Catalog & Inventory]
+      summary: Get product
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Catalog & Inventory]
+      summary: Update product
+      operationId: updateProduct
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Catalog & Inventory]
+      summary: Delete (deactivate) product
+      operationId: deleteProduct
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '204':
+          description: Product deactivated
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/stores/{storeId}/devices/pairing-tokens:
+    post:
+      tags: [Scanner & Streaming]
+      summary: Request pairing token
+      description: Scanner was paired ([REQ-F-005], [REQ-F-007]). Admin JWT required.
+      operationId: createPairingToken
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePairingTokenRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairingTokenResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /devices/pair:
+    post:
+      tags: [Scanner & Streaming]
+      summary: Device pair with code
+      description: Auth via device key / TLS client cert (POC).
+      operationId: pairDevice
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevicePairRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePairResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /devices/{deviceId}/inventory-events:
+    post:
+      tags: [Scanner & Streaming]
+      summary: Stream inventory events
+      description: Append inventory events from product scanner ([REQ-F-006]). Auth via device token.
+      operationId: postInventoryEvents
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryEventsRequest'
+      responses:
+        '202':
+          description: Events accepted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /devices/{deviceId}/footfall-events:
+    post:
+      tags: [Scanner & Streaming]
+      summary: Stream footfall events
+      description: Append footfall from door scanner ([REQ-F-008]). Auth via device token.
+      operationId: postFootfallEvents
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FootfallEventsRequest'
+      responses:
+        '202':
+          description: Events accepted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/stores/{storeId}/display-zones:
+    get:
+      tags: [Display Configuration]
+      summary: List display zones
+      operationId: listDisplayZones
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayZoneList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Display Configuration]
+      summary: Create display zone
+      operationId: createDisplayZone
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisplayZoneCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayZone'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/stores/{storeId}/display-zones/{zoneId}:
+    put:
+      tags: [Display Configuration]
+      summary: Update display zone
+      operationId: updateDisplayZone
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: zoneId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisplayZoneUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayZone'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/stores/{storeId}/display-configs:
+    get:
+      tags: [Display Configuration]
+      summary: List display configs
+      operationId: listDisplayConfigs
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, active, archived, rejected] }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayConfigList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Display Configuration]
+      summary: Create display configuration
+      description: Weekly or ad hoc; useRecommendation triggers engine/LLM ([REQ-F-009], [REQ-F-010]).
+      operationId: createDisplayConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisplayConfigCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/stores/{storeId}/display-configs/{displayConfigId}:
+    get:
+      tags: [Display Configuration]
+      summary: Get display config
+      operationId: getDisplayConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: displayConfigId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayConfig'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Display Configuration]
+      summary: Update display config
+      operationId: updateDisplayConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: displayConfigId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisplayConfigUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayConfig'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/stores/{storeId}/display-configs/{displayConfigId}:activate:
+    post:
+      tags: [Display Configuration]
+      summary: Activate display config
+      description: Sets status active; previous active for period archived.
+      operationId: activateDisplayConfig
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: displayConfigId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayConfig'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/stores/{storeId}/analytics/zones:
+    get:
+      tags: [Analytics]
+      summary: Zone performance summary
+      operationId: getAnalyticsZones
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: displayConfigId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZonePerformanceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/stores/{storeId}/analytics/products:
+    get:
+      tags: [Analytics]
+      summary: Product performance by display
+      operationId: getAnalyticsProducts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: displayConfigId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: productId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPerformanceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT; path tenantId must match token tenant.
+
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Must match authenticated tenant
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Invalid request body or parameters
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Forbidden:
+      description: Tenant mismatch or insufficient permissions
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+
+  schemas:
+    ProblemDetail:
+      type: object
+      description: RFC 7807 problem detail
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        traceId: { type: string }
+
+    CreateTenantRequest:
+      type: object
+      required: [name, admin, store]
+      properties:
+        name: { type: string, example: "FreshMart - MG Road" }
+        admin:
+          type: object
+          required: [email, password]
+          properties:
+            email: { type: string, format: email }
+            displayName: { type: string }
+            password: { type: string, format: password }
+        store:
+          type: object
+          required: [name, type, city, country]
+          properties:
+            name: { type: string }
+            type: { type: string, example: grocery }
+            city: { type: string }
+            country: { type: string, example: IN }
+    TenantCreated:
+      type: object
+      properties:
+        tenantId: { type: string, format: uuid }
+        status: { type: string, example: trial }
+        plan: { type: string, example: trial-30d }
+    TenantProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string }
+        plan: { type: string }
+        defaultLocale: { type: string }
+
+    GenerateCatalogRequest:
+      type: object
+      properties:
+        storeType: { type: string, example: grocery }
+        questionnaire:
+          type: object
+          properties:
+            hasFreshProduce: { type: boolean }
+            focusBrands: { type: array, items: { type: string } }
+            priceBand: { type: string, enum: [low, mid, high] }
+        maxProducts: { type: integer, minimum: 1 }
+    JobAccepted:
+      type: object
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [pending] }
+    JobStatus:
+      type: object
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, running, completed, failed] }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        result: { type: object }
+
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        storeId: { type: string, format: uuid }
+        externalSku: { type: string }
+        name: { type: string }
+        description: { type: string }
+        categoryId: { type: string, format: uuid }
+        price: { type: number, format: double }
+        unit: { type: string }
+        source: { type: string, enum: [manual, gen_ai, generated_template] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProductCreate:
+      type: object
+      required: [name]
+      properties:
+        externalSku: { type: string }
+        name: { type: string }
+        description: { type: string }
+        categoryId: { type: string, format: uuid }
+        price: { type: number }
+        unit: { type: string }
+        source: { type: string, enum: [manual, gen_ai, generated_template] }
+    ProductUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        categoryId: { type: string, format: uuid }
+        price: { type: number }
+        unit: { type: string }
+        isActive: { type: boolean }
+    ProductList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Product' } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    GenerateProductRequest:
+      type: object
+      properties:
+        input: { type: string, example: "500g organic basmati rice" }
+        mode: { type: string, enum: [suggest-only, create], default: suggest-only }
+    GenerateProductResponse:
+      type: object
+      properties:
+        suggested:
+          $ref: '#/components/schemas/ProductSuggestion'
+    ProductSuggestion:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        categoryId: { type: string }
+        unit: { type: string }
+        price: { type: number }
+        source: { type: string, example: gen_ai }
+
+    CreatePairingTokenRequest:
+      type: object
+      required: [deviceType]
+      properties:
+        deviceType: { type: string, enum: [product_scanner, door_scanner] }
+        name: { type: string }
+    PairingTokenResponse:
+      type: object
+      properties:
+        deviceId: { type: string, format: uuid }
+        pairingCode: { type: string }
+        expiresAt: { type: string, format: date-time }
+    DevicePairRequest:
+      type: object
+      required: [pairingCode]
+      properties:
+        pairingCode: { type: string }
+    DevicePairResponse:
+      type: object
+      properties:
+        tenantId: { type: string, format: uuid }
+        storeId: { type: string, format: uuid }
+        deviceId: { type: string, format: uuid }
+
+    InventoryEventItem:
+      type: object
+      required: [productExternalSku, eventType, quantity]
+      properties:
+        productExternalSku: { type: string }
+        eventType: { type: string, enum: [increment, decrement, adjustment] }
+        quantity: { type: integer, minimum: 1 }
+        occurredAt: { type: string, format: date-time }
+    InventoryEventsRequest:
+      type: object
+      required: [events]
+      properties:
+        events: { type: array, items: { $ref: '#/components/schemas/InventoryEventItem' } }
+
+    FootfallEventItem:
+      type: object
+      properties:
+        gender: { type: string, enum: [male, female, unknown] }
+        ageBucket: { type: string }
+        enteredAt: { type: string, format: date-time }
+    FootfallEventsRequest:
+      type: object
+      required: [events]
+      properties:
+        events: { type: array, items: { $ref: '#/components/schemas/FootfallEventItem' } }
+
+    DisplayZone:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        storeId: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+    DisplayZoneCreate:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+    DisplayZoneUpdate:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+    DisplayZoneList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/DisplayZone' } }
+
+    DisplayConfigZoneItem:
+      type: object
+      properties:
+        zoneId: { type: string, format: uuid }
+        productIds: { type: array, items: { type: string, format: uuid } }
+        layoutHint: { type: string, example: front-facing }
+    DisplayConfigCreate:
+      type: object
+      required: [name, schedule, effectiveFrom]
+      properties:
+        name: { type: string }
+        schedule: { type: string, enum: [weekly, one_off] }
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: string, format: date-time }
+        useRecommendation: { type: boolean, default: false }
+        sources:
+          type: object
+          properties:
+            eventsAndTrends: { type: boolean }
+            footfallLastWeek: { type: boolean }
+            historicalSales: { type: string, enum: [own_db, gen_ai, none] }
+        zones: { type: array, items: { $ref: '#/components/schemas/DisplayConfigZoneItem' } }
+    DisplayConfigUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: string, format: date-time }
+        zones: { type: array, items: { $ref: '#/components/schemas/DisplayConfigZoneItem' } }
+    DisplayConfig:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string, format: uuid }
+        storeId: { type: string, format: uuid }
+        name: { type: string }
+        schedule: { type: string }
+        status: { type: string, enum: [draft, active, archived, rejected] }
+        effectiveFrom: { type: string, format: date-time }
+        effectiveTo: { type: string, format: date-time }
+        useRecommendation: { type: boolean }
+        recommendationUsed: { type: boolean }
+        zones: { type: array, items: { $ref: '#/components/schemas/DisplayConfigZoneItem' } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DisplayConfigList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/DisplayConfig' } }
+        total: { type: integer }
+
+    ZonePerformanceItem:
+      type: object
+      properties:
+        zoneId: { type: string }
+        footfallCount: { type: integer }
+        avgDwellSeconds: { type: number }
+        basketConversionRate: { type: number }
+    ZonePerformanceResponse:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        zones: { type: array, items: { $ref: '#/components/schemas/ZonePerformanceItem' } }
+
+    ProductPerformanceItem:
+      type: object
+      properties:
+        productId: { type: string }
+        zoneId: { type: string }
+        unitsSold: { type: integer }
+        revenue: { type: number }
+    ProductPerformanceResponse:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        products: { type: array, items: { $ref: '#/components/schemas/ProductPerformanceItem' } }
