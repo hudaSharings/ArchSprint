@@ -48,7 +48,7 @@ Proof-of-concepts to de-risk unknowns. Ordered by priority (1 = highest).
 | Priority | ID | POC | Objective | Success criteria | Resolves |
 |----------|----|-----|-----------|------------------|----------|
 | 1 | [POC-01] | **Synthetic scanner & footfall streams** | Produce canonical event streams (inventory add/remove, footfall) for backend and analytics without real hardware | Stream ingest consumes events; analytics pipeline runs; schema documented | [RISK-01], [REQ-F-006], [REQ-F-008] |
-| 2 | [POC-02] | **Gen AI cost & quality** | One Gen AI provider for product enrichment and/or events/sales; measure cost per tenant and quality | Cost per tenant within trial budget; acceptable quality for product add and config context | [RISK-02], [REQ-NF-003] |
+| 2 | [POC-02] | **Gen AI cost & quality** | One Gen AI provider for product enrichment and events/sales context; measure cost per tenant and quality | Cost per tenant within trial budget; acceptable quality for product add and config context | [RISK-02], [REQ-NF-003] |
 | 3 | [POC-03] | **Configuration engine (LLM vs rules)** | Compare LLM-driven vs rule-based display recommendation for one scenario | Recommendation quality and latency acceptable; cost fits [REQ-NF-003] | [RISK-03], [REQ-F-010] |
 | 4 | [POC-04] | **Analytics engine (Feldera or alternative)** | Run incremental pipelines (e.g. footfall aggregates, sales context) with synthetic data | Pipelines run; latency and ops acceptable for Beta | [RISK-04], [REQ-NF-009] |
 | 5 | [POC-05] | **Tenant isolation** | Automated tests: every query scoped by tenant; no cross-tenant read/write | Test suite passes; documented tenant-id contract | [RISK-05], [ARCH-CHAR-002], [ARCH-CHAR-007] |

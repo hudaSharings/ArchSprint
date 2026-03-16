@@ -69,7 +69,7 @@ This view mirrors `mvp-roadmap.md` but focuses on engineering outputs.
 |-------|------------|---------------------|---------------|
 | **T3 Catalog & Inventory** | Usable product & inventory APIs | Full CRUD with validation; inventory event ingestion and snapshot update jobs; Gen AI metadata table for products. | Tenant can manage products and see inventory via APIs only. |
 | **T4 Scanner & Footfall Ingest** | Stream ingestion path | Device registration & pairing; HTTP/gRPC ingestion endpoints for product and door scanners; synthetic data generators for both streams. | Synthetic streams flowing into `inventory_events` & `footfall_events` with visible metrics. |
-| **T8 Analytics & Reporting** | Analytics plumbing | Integrate incremental compute engine (e.g., Fellera) or equivalent; define 1–2 materialized views (`mv_zone_performance_daily`, `mv_product_performance_weekly`). | Simple query over analytics views works in dev; latency within agreed bounds. |
+| **T8 Analytics & Reporting** | Analytics plumbing | Integrate incremental compute engine (e.g., Feldera) or equivalent; define 1–2 materialized views (`mv_zone_performance_daily`, `mv_product_performance_weekly`). | Simple query over analytics views works in dev; latency within agreed bounds. |
 | **T2 Auth & Tenancy** | Harden multi-tenancy | Enforce tenant filters in all MVP queries; composite indexes from data-model doc; basic admin vs. future role support. | Tenant isolation proven by tests and manual verification. |
 | **T9 DevOps & Observability** | Backend health | Health endpoints; golden signal dashboards (RPS, latency, errors, saturation). | P90/P99 monitoring in place; alerting on error spikes. |
 

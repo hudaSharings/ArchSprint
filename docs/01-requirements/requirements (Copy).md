@@ -12,7 +12,7 @@
 | [REQ-F001] | The system SHALL provide a **multi-tenant SaaS** offering with Web and Mobile (Android & iOS) front ends. | Solution: multi-tenant SAAS, Web and Mobile |
 | [REQ-F002] | As a store admin I SHALL be able to **maintain a list of products and inventory** (CRUD). | Use case: maintain products and inventory |
 | [REQ-F003] | As a store admin I SHALL be able to **add new products** by fetching product details using Gen AI (fully or partially). | Use case: Add products via Gen AI |
-| [REQ-F004] | As a store admin I SHALL be able to **generate an initial product list** based on type of store and guided questionnaires, using synthetic data and/or Gen AI. | Use case: initial product list from store type + questionnaires |
+| [REQ-F004] | As a store admin I SHALL be able to **generate an initial product list** based on type of store and guided questionnaires, using synthetic data and Gen AI (either individually or in combination as appropriate). | Use case: initial product list from store type + questionnaires |
 | [REQ-F005] | As a store admin I SHALL be able to **pair the software with product scanners** that stream data for inventory additions and deletions. | Use case: pair with product scanners |
 | [REQ-F006] | The system SHALL **consume data from product scanners** to maintain inventory (streaming); POC may use synthetic data for streams. | Use case: System consumes product scanner data |
 | [REQ-F007] | As a store admin I SHALL be able to **pair with main door scanners** that stream footfalls with attributes (e.g. Male/Female, approximate age). | Use case: pair with main door scanners |

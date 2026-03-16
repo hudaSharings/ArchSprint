@@ -12,7 +12,7 @@
 | [REQ-F-001] | The system SHALL provide a multi-tenant SaaS offering with Web and Mobile (Android & iOS) front ends. | High |
 | [REQ-F-002] | As a store admin I SHALL be able to maintain a list of products and inventory (CRUD). | High |
 | [REQ-F-003] | As a store admin I SHALL be able to add new products by fetching product details using Gen AI (fully or partially). | High |
-| [REQ-F-004] | As a store admin I SHALL be able to generate an initial product list based on type of store and guided questionnaires, using synthetic data and/or Gen AI. | High |
+| [REQ-F-004] | As a store admin I SHALL be able to generate an initial product list based on type of store and guided questionnaires, using synthetic data and Gen AI (either individually or in combination as appropriate). | High |
 | [REQ-F-005] | As a store admin I SHALL be able to pair the software with product scanners that stream data for inventory additions and deletions. | High |
 | [REQ-F-006] | The system SHALL consume data from product scanners to maintain inventory (streaming); POC may use synthetic data for streams. | High |
 | [REQ-F-007] | As a store admin I SHALL be able to pair with main door scanners that stream footfalls with attributes (e.g. Male/Female, approximate age). | High |

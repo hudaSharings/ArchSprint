@@ -13,7 +13,7 @@
 
 ## Context
 
-The Retail Store Display Management App is a multi-tenant B2B SaaS with Web and Mobile front ends, streaming ingestion (product scanners, main door footfall), Gen AI integration, and an analytics/configuration engine. The **Top 3 Architecture Characteristics** from [requirements.md](../01-requirements/requirements.md) drive the architecture choice:
+The Retail Store Display Management App is a multi-tenant B2B SaaS with Web and Mobile front ends, streaming ingestion (product scanners, main door footfall), Gen AI integration, and an analytics/configuration engine. The **Top 3 Architecture Characteristics** from the requirements document drive the architecture choice:
 
 | Rank | ID | Characteristic | Implication |
 |------|----|----------------|-------------|
@@ -41,7 +41,38 @@ This choice is justified by the Top 3:
 
 ---
 
-## Component view (Mermaid)
+## Trade-offs
+
+- **Scalability vs. granular scaling:** Horizontal scaling of API and workers is simple, but we cannot scale very small capabilities independently.
+- **Cost vs. isolation:** Shared deployment and DB reduce infra/ops cost but rely on strict tenant filtering instead of physical isolation.
+- **Simplicity vs. future extraction:** A single modular codebase is easier to operate now, at the cost of extraction work later if modules need independent lifecycles.
+
+---
+
+## Consequences
+
+### Positive
+
+- **Aligned with top characteristics:** Supports scalability, cost efficiency, and multi-tenancy in one design.
+- **Operational simplicity:** Few deployables make monitoring, debugging, and rollout straightforward.
+- **Portability:** Can run on GCP, Azure, or AWS with minimal change.
+
+### Negative
+
+- **Coarse scaling and coupling:** We scale API/worker fleets, not tiny capabilities, and deployments bundle backend changes.
+- **Extraction cost:** If some modules later need independent scaling or lifecycles, we must extract them into services and add APIs/events.
+
+---
+
+## Links
+
+- [docs/01-requirements/requirements.md](../01-requirements/requirements.md) — Top 3 characteristics (Section 3.2), [ARCH-CHAR-001], [ARCH-CHAR-002], [ARCH-CHAR-003]
+- [docs/02-discovery/event-storming.md](../02-discovery/event-storming.md) — Bounded contexts and domain events
+- [diagrams/container-c2.mmd](../../diagrams/container-c2.mmd) — Container diagram (C2)
+
+---
+
+## Appendix: Component view (Mermaid)
 
 High-level component structure inside the backend boundary, showing modular monolith with event-driven links:
 
@@ -72,28 +103,3 @@ flowchart TB
     Display --> DB
     Tenant --> DB
 ```
-
----
-
-## Consequences
-
-### Positive
-
-- **Aligns with Top 3:** Delivers scalability (stateless API + scalable workers), cost efficiency (shared infra, few deployments), and multi-tenancy (single codebase, explicit tenant context).
-- **Simpler operations:** One (or few) deployables; easier monitoring, debugging, and rollout than a large microservices set.
-- **Clear module boundaries:** Bounded contexts (see [event-storming.md](../02-discovery/event-storming.md)) map to modules; easier to extract services later if needed.
-- **Portability:** Modular monolith can run on GCP, Azure, or AWS with minimal change; supports [REQ-NF-001] and [ARCH-CHAR-006].
-
-### Negative
-
-- **Scaling is coarser:** Cannot scale a single tiny capability in isolation; we scale API, ingest, or analytics as units.
-- **Deployment coupling:** Backend changes deploy together; requires discipline (feature flags, compatibility) to avoid big-bang releases.
-- **Future extraction:** If we later need independent scaling or lifecycle for a module, we must extract it into a service and introduce APIs/events; the modular structure reduces but does not eliminate that cost.
-
----
-
-## Links
-
-- [docs/01-requirements/requirements.md](../01-requirements/requirements.md) — Top 3 characteristics (Section 3.2), [ARCH-CHAR-001], [ARCH-CHAR-002], [ARCH-CHAR-003]
-- [docs/02-discovery/event-storming.md](../02-discovery/event-storming.md) — Bounded contexts and domain events
-- [diagrams/container-c2.mmd](../../diagrams/container-c2.mmd) — Container diagram (C2)
